@@ -1,0 +1,90 @@
+name: Reading Focus Bot
+
+on:
+  # Manuell starten
+  workflow_dispatch:
+
+  # Täglich um 08:00 und 20:00 Uhr (UTC) für Spaced-Repetition-Checks
+  schedule:
+    - cron: "0 7,19 * * *"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────
+  # Job 1: Bot als Polling-Bot laufen lassen (max. 5 Minuten)
+  # Startet bei workflow_dispatch, verarbeitet alle Nachrichten
+  # ─────────────────────────────────────────────────────────────────
+  run-bot:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    timeout-minutes: 350  # GitHub Actions max: 6h
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python Setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Dependencies installieren
+        run: pip install -r requirements.txt
+
+      - name: Daten aus Gist laden
+        env:
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+        run: python scripts/load_gist.py
+
+      - name: Bot starten
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          DATA_FILE: data.json
+        run: python bot.py
+
+      - name: Daten in Gist speichern
+        if: always()
+        env:
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+        run: python scripts/save_gist.py
+
+  # ─────────────────────────────────────────────────────────────────
+  # Job 2: Scheduled Check – fällige Wiederholungen benachrichtigen
+  # ─────────────────────────────────────────────────────────────────
+  remind:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python Setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Dependencies installieren
+        run: pip install -r requirements.txt
+
+      - name: Daten aus Gist laden
+        env:
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+        run: python scripts/load_gist.py
+
+      - name: Erinnerungen senden
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          DATA_FILE: data.json
+        run: python scripts/send_reminders.py
+
+      - name: Daten speichern
+        if: always()
+        env:
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+        run: python scripts/save_gist.py
