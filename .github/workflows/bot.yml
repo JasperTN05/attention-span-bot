@@ -74,17 +74,17 @@ jobs:
         env:
           GIST_ID: ${{ secrets.GIST_ID }}
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
-        run: python scripts/load_gist.py
+        run: python .github/scripts/load_gist.py
 
       - name: Erinnerungen senden
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           DATA_FILE: data.json
-        run: python scripts/send_reminders.py
+        run: python .github/scripts/send_reminders.py
 
       - name: Daten speichern
         if: always()
         env:
           GIST_ID: ${{ secrets.GIST_ID }}
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
-        run: python scripts/save_gist.py
+        run: python .github/scripts/save_gist.py
